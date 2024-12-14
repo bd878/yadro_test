@@ -45,6 +45,17 @@ std::istream& operator>>(std::istream& is, TimeFormat& tf)
 	return is;
 }
 
+std::ostream& operator<<(std::ostream& os, TimeFormat& tf)
+{
+	/* how much bytes would have been written */
+	const int n_bytes = snprintf(nullptr, 0, "%02d:%02d", tf.hours, tf.minutes);
+	std::string out;
+	out.resize(n_bytes+1);
+	snprintf(&out[0], out.size(), "%02d:%02d", tf.hours, tf.minutes);
+	os << out;
+	return os;
+}
+
 struct Input
 {
 	TimeFormat time_open;
@@ -77,7 +88,7 @@ int main(int argc, char const *argv[])
 
 	Input in;
 	fin >> in;
-	std::cout << in.time_open.hours << ":" << in.time_open.minutes << std::endl;
+	std::cout << in.time_open << " - " << in.time_close << std::endl;
 
 	return 0;
 }

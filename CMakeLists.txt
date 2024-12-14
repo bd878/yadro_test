@@ -6,7 +6,7 @@ add_executable(yadro_test main.cpp)
 
 set_target_properties(yadro_test
 	PROPERTIES
-		CXX_STANDARD 17
+		CXX_STANDARD 20
 		CXX_EXTENSIONS OFF
 		CXX_STANDARD_REQUIRED OFF
 	)
