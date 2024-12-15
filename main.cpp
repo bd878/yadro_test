@@ -1,74 +1,69 @@
 #include <iostream>
 #include <string>
 #include <utility>
+#include <unordered_map>
 #include <fstream>
 #include <sstream>
 #include <exception>
 
-std::pair<std::string, std::string> SplitTwo(std::string& str, char delim)
-{
-	const size_t pos = str.find(delim);
-	if (pos == std::string::npos) {
-		return {str, ""};
-	} else {
-		return {str.substr(0, pos), str.substr(pos+1)};
-	}
-}
+#include "TimeFormat.hpp"
+#include "EventParams.hpp"
+#include "Event.hpp"
+#include "Events.hpp"
 
-int ConvertStrToInt(const std::string& str)
-{
-	size_t pos;
-	const int num = std::stoi(str, &pos);
-	if (pos != str.length()) {
-		std::stringstream error;
-		error << "string " << str << " contains " << (str.length() - pos) << "trailing chars";
-		throw std::invalid_argument(error.str());
-	}
-	return num;
-}
-
-struct TimeFormat
-{
-	int minutes;
-	int hours;
+enum class InputState {
+	Init = 0,
+	Horaires = 1,
+	Price = 2,
+	EventFeed = 3
 };
-
-std::istream& operator>>(std::istream& is, TimeFormat& tf)
-{
-	std::string str;
-	is >> str;
-
-	const auto [lhs, rhs] = SplitTwo(str, ':');
-	tf.hours = ConvertStrToInt(lhs);
-	tf.minutes = ConvertStrToInt(rhs);
-
-	return is;
-}
-
-std::ostream& operator<<(std::ostream& os, TimeFormat& tf)
-{
-	/* how much bytes would have been written */
-	const int n_bytes = snprintf(nullptr, 0, "%02d:%02d", tf.hours, tf.minutes);
-	std::string out;
-	out.resize(n_bytes+1);
-	snprintf(&out[0], out.size(), "%02d:%02d", tf.hours, tf.minutes);
-	os << out;
-	return os;
-}
 
 struct Input
 {
+	InputState state = InputState::Init;
+	Events* events;
+
 	TimeFormat time_open;
 	TimeFormat time_close;
-	int tables_count;
-	int hour_price;
+	int tables_count = 0;
+	int price_for_hour = 0;
+
+	Input(Events* ev) : events(ev) {}
+
+	~Input() {
+		delete events;
+	}
 };
 
 std::istream& operator>>(std::istream& is, Input& in)
 {
-	is >> in.tables_count >> in.time_open >> in.time_close
-		>> in.hour_price;
-
+	switch (in.state) {
+		case InputState::Init: {
+			is >> in.tables_count;
+			in.state = InputState::Horaires;
+			break;
+		}
+		case InputState::Horaires: {
+			is >> in.time_open >> in.time_close;
+			in.state = InputState::Price;
+			break;
+		}
+		case InputState::Price: {
+			is >> in.price_for_hour;
+			in.state = InputState::EventFeed;
+			break;
+		}
+		case InputState::EventFeed: {
+			Event event;
+			EventParams params;
+			is >> params;
+			event.Load(params);
+			in.events->InsertAfter(in.events->GetLast(), event);
+			break;
+		}
+		default:
+			break;
+	}
 	return is;
 }
 
@@ -82,13 +77,24 @@ int main(int argc, char const *argv[])
 	std::fstream fin(argv[1]);
 
 	if (!fin.is_open()) {
-		std::cerr << "failed to open " << argv[1] << std::endl;
-		exit(EXIT_FAILURE);
+		std::cerr << "fail to open " << argv[1] << std::endl;
+		std::exit(EXIT_FAILURE);
 	}
 
-	Input in;
-	fin >> in;
-	std::cout << in.time_open << " - " << in.time_close << std::endl;
+	Input input_state(new Events);
+
+	std::string line;
+	while (std::getline(fin, line) && !line.empty()) {
+		std::stringstream line_stream(line);
+
+		try {
+			line_stream >> input_state;
+		} catch (std::exception& e) {
+			std::cerr << "fail on line: " << line << "\n"
+				<< ", error: " << e.what() << std::endl;
+			std::exit(EXIT_FAILURE);
+		}
+	}
 
 	return 0;
 }
