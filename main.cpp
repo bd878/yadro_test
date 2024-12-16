@@ -67,6 +67,26 @@ std::istream& operator>>(std::istream& is, Input& in)
 	return is;
 }
 
+std::ostream& operator<<(std::ostream& os, Input& in)
+{
+	if (in.state == InputState::Init) {
+		os << "No data" << std::endl;
+	}
+	if (in.state > InputState::Init) {
+		os << "Tables count: " << in.tables_count << std::endl;
+	}
+	if (in.state >= InputState::Horaires) {
+		os << "Horaires: " << in.time_open << " - " << in.time_close << std::endl;
+	}
+	if (in.state >= InputState::Price) {
+		os << "Price: " << in.price_for_hour << std::endl;
+	}
+	if (in.state >= InputState::EventFeed) {
+		os << "Events: " << "\n";
+	}
+	return os;
+}
+
 int main(int argc, char const *argv[])
 {
 	if (argc != 2) {
@@ -95,6 +115,8 @@ int main(int argc, char const *argv[])
 			std::exit(EXIT_FAILURE);
 		}
 	}
+
+	std::cout << input_state << std::endl;
 
 	return 0;
 }
