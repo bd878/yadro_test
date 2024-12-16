@@ -14,6 +14,12 @@ struct TimeFormat
 		hours(0),
 		minutes(0)
 	{}
+
+	TimeFormat(TimeFormat& tf)
+	{
+		hours = tf.hours;
+		minutes = tf.minutes;
+	}
 };
 
 std::pair<std::string, std::string> SplitTwo(std::string& str, char delim)

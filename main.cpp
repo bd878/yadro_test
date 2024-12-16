@@ -11,82 +11,149 @@
 #include "Event.hpp"
 #include "Events.hpp"
 
-enum class InputState {
-	Init = 0,
-	Horaires = 1,
-	Price = 2,
-	EventFeed = 3
+class ComputerTables
+{
+	std::vector<std::string> table_to_client;
+
+public:
+	const bool HasFreeTable();
+	const int GetFreeTable();
+	const int GetClientOnTable(int table);
+
+	void Take(int table, std::string client);
+	void Untake(int table, std::string client);
 };
 
-struct Input
+class Clients
 {
-	InputState state = InputState::Init;
-	Events* events;
+	std::unordered_map<std::string, int> client_to_table;
 
-	TimeFormat time_open;
-	TimeFormat time_close;
-	int tables_count = 0;
-	int price_for_hour = 0;
+public:
+	const bool HasClient(std::string client);
+	const int GetClientTable(std::string client);
 
-	Input(Events* ev) : events(ev) {}
+	void Take(int table, std::string client);
+	void Untake(int table, std::string client);
+};
 
-	~Input() {
-		delete events;
+class ComputerClass
+{
+	ComputerTables* m_tables;
+	Clients* m_clients;
+	Events* m_events;
+
+public:
+	ComputerClass(
+		ComputerTables* tables,
+		Clients* clients,
+		Events* events
+	) : m_tables(tables),
+		m_clients(clients),
+		m_events(events)
+	{}
+
+	~ComputerClass()
+	{
+		delete m_tables;
+		delete m_clients;
+		delete m_events;
+	}
+
+	void HandleEvent(Event&);
+};
+
+void HandleEvent(Event& event)
+{}
+
+class ComputerClassBuilder
+{
+	ComputerTables* m_tables;
+	Clients* m_clients;
+	Events* m_events;
+
+public:
+
+	void AddTables(ComputerTables* tables) { m_tables = tables; }
+	void AddClients(Clients* clients) { m_clients = clients; }
+	void AddEvents(Events* events) { m_events = events; }
+
+	ComputerClass* BuildComputerClass()
+	{
+		return new ComputerClass(
+			m_tables,
+			m_clients,
+			m_events
+		);
 	}
 };
 
-std::istream& operator>>(std::istream& is, Input& in)
+class ProgramState
 {
-	switch (in.state) {
-		case InputState::Init: {
-			is >> in.tables_count;
-			in.state = InputState::Horaires;
+	enum State {
+		Init = 0,
+		Horaires = 1,
+		Price = 2,
+		EventFeed = 3
+	};
+
+	State state = ProgramState::State::Init;
+
+	TimeFormat m_time_open;
+	TimeFormat m_time_close;
+	int m_tables_count = 0;
+	int m_price_for_hour = 0;
+
+	ComputerClassBuilder* m_builder;
+	ComputerClass* m_computer_class;
+
+public:
+	ProgramState(ComputerClassBuilder* b)
+		: builder(b) {}
+
+	~ProgramState() {
+		delete m_builder;
+		if (m_computer_class != nullptr) {
+			delete m_computer_class;
+		}
+	}
+
+	void Shift(std::string);
+};
+
+void Shift(std::string cmd_line)
+{
+	std::stringstream is(cmd_line);
+
+	switch (state) {
+		case ProgramState::State::Init: {
+			is >> m_tables_count;
+			m_builder->AddTables(new ComputerTables(m_tables_count));
+			m_builder->AddClients(new Clients);
+			state = ProgramState::State::Horaires;
 			break;
 		}
-		case InputState::Horaires: {
-			is >> in.time_open >> in.time_close;
-			in.state = InputState::Price;
+		case ProgramState::State::Horaires: {
+			is >> m_time_open >> m_time_close;
+			state = ProgramState::State::Price;
 			break;
 		}
-		case InputState::Price: {
-			is >> in.price_for_hour;
-			in.state = InputState::EventFeed;
+		case ProgramState::State::Price: {
+			is >> m_price_for_hour;
+			m_computer_class = m_builder->BuildComputerClass();
+			state = ProgramState::State::EventFeed;
 			break;
 		}
-		case InputState::EventFeed: {
+		case ProgramState::State::EventFeed: {
 			Event event;
 			EventParams params;
 			is >> params;
 			event.Load(params);
-			in.events->InsertAfter(in.events->GetLast(), event);
+			m_computer_class->HandleEvent(event);
 			break;
 		}
 		default:
 			break;
 	}
-	return is;
-}
-
-std::ostream& operator<<(std::ostream& os, Input& in)
-{
-	if (in.state == InputState::Init) {
-		os << "No data" << std::endl;
-	}
-	if (in.state > InputState::Init) {
-		os << "Tables count: " << in.tables_count << std::endl;
-	}
-	if (in.state >= InputState::Horaires) {
-		os << "Horaires: " << in.time_open << " - " << in.time_close << std::endl;
-	}
-	if (in.state >= InputState::Price) {
-		os << "Price: " << in.price_for_hour << std::endl;
-	}
-	if (in.state >= InputState::EventFeed) {
-		in.events->Traverse([&os](const Event& ev) {
-			os << ev << "\n";
-		});
-	}
-	return os;
 }
 
 int main(int argc, char const *argv[])
@@ -103,14 +170,12 @@ int main(int argc, char const *argv[])
 		std::exit(EXIT_FAILURE);
 	}
 
-	Input input_state(new Events);
+	ProgramState state(new ComputerClassBuilder);
 
 	std::string line;
 	while (std::getline(fin, line) && !line.empty()) {
-		std::stringstream line_stream(line);
-
 		try {
-			line_stream >> input_state;
+			state.Shift(line);
 		} catch (std::exception& e) {
 			std::cerr << "fail on line: " << line << "\n"
 				<< ", error: " << e.what() << std::endl;
@@ -118,7 +183,7 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-	std::cout << input_state;
+	std::cout << reader;
 
 	return 0;
 }
