@@ -21,4 +21,12 @@ public:
 			m_table = pParams.GetTable();
 		}
 	}
+
+	friend std::ostream& operator<<(std::ostream& os, const Event& ev);
 };
+
+std::ostream& operator<<(std::ostream& os, const Event& ev)
+{
+	os << ev.m_time << " " << ev.m_id << " " << ev.m_name;
+	return os;
+}

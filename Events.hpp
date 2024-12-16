@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "EventParams.hpp"
 #include "TimeFormat.hpp"
 #include "Event.hpp"
@@ -7,6 +9,8 @@
 class Events
 {
 public:
+	using Function = std::function<void(const Event&)>;
+
 	struct Node {
 		Event value;
 		Node* next = nullptr;
@@ -43,6 +47,12 @@ public:
 			Node* currentHead = head;
 			head = head->next;
 			delete currentHead;
+		}
+	}
+
+	void Traverse(Function visit) {
+		for (Node* node = GetHead(); node; node = node->next) {
+			visit(node->value);
 		}
 	}
 

@@ -82,7 +82,9 @@ std::ostream& operator<<(std::ostream& os, Input& in)
 		os << "Price: " << in.price_for_hour << std::endl;
 	}
 	if (in.state >= InputState::EventFeed) {
-		os << "Events: " << "\n";
+		in.events->Traverse([&os](const Event& ev) {
+			os << ev << "\n";
+		});
 	}
 	return os;
 }
@@ -116,7 +118,7 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-	std::cout << input_state << std::endl;
+	std::cout << input_state;
 
 	return 0;
 }

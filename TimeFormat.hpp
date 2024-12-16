@@ -50,7 +50,7 @@ std::istream& operator>>(std::istream& is, TimeFormat& tf)
 	return is;
 }
 
-std::ostream& operator<<(std::ostream& os, TimeFormat& tf)
+std::ostream& operator<<(std::ostream& os, const TimeFormat& tf)
 {
 	/* how much bytes would have been written */
 	const int n_bytes = snprintf(nullptr, 0, "%02d:%02d", tf.hours, tf.minutes);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <istream>
+#include <iostream>
 #include <string>
 
 #include "TimeFormat.hpp"
@@ -21,6 +21,13 @@ inline std::istream& operator>>(std::istream& is, EventID& event_id)
 	is >> id;
 	event_id = static_cast<EventID>(id);
 	return is;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const EventID& event_id)
+{
+	int id = static_cast<int>(event_id);
+	os << id;
+	return os;
 }
 
 class EventParams
