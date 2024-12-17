@@ -1,93 +1,12 @@
 #include <iostream>
 #include <string>
 #include <utility>
-#include <unordered_map>
+#include <memory>
 #include <fstream>
-#include <sstream>
 #include <exception>
 
-#include "TimeFormat.hpp"
-#include "EventParams.hpp"
-#include "Event.hpp"
-#include "Events.hpp"
-
-enum class InputState {
-	Init = 0,
-	Horaires = 1,
-	Price = 2,
-	EventFeed = 3
-};
-
-struct Input
-{
-	InputState state = InputState::Init;
-	Events* events;
-
-	TimeFormat time_open;
-	TimeFormat time_close;
-	int tables_count = 0;
-	int price_for_hour = 0;
-
-	Input(Events* ev) : events(ev) {}
-
-	~Input() {
-		delete events;
-	}
-};
-
-std::istream& operator>>(std::istream& is, Input& in)
-{
-	switch (in.state) {
-		case InputState::Init: {
-			is >> in.tables_count;
-			in.state = InputState::Horaires;
-			break;
-		}
-		case InputState::Horaires: {
-			is >> in.time_open >> in.time_close;
-			in.state = InputState::Price;
-			break;
-		}
-		case InputState::Price: {
-			is >> in.price_for_hour;
-			in.state = InputState::EventFeed;
-			break;
-		}
-		case InputState::EventFeed: {
-			Event event;
-			EventParams params;
-			is >> params;
-			event.Load(params);
-			in.events->InsertAfter(in.events->GetLast(), event);
-			break;
-		}
-		default:
-			break;
-	}
-	return is;
-}
-
-std::ostream& operator<<(std::ostream& os, Input& in)
-{
-	if (in.state == InputState::Init) {
-		os << "No data" << std::endl;
-	}
-	if (in.state > InputState::Init) {
-		os << "Tables count: " << in.tables_count << std::endl;
-	}
-	if (in.state >= InputState::Horaires) {
-		os << "Horaires: " << in.time_open << " - " << in.time_close << std::endl;
-	}
-	if (in.state >= InputState::Price) {
-		os << "Price: " << in.price_for_hour << std::endl;
-	}
-	if (in.state >= InputState::EventFeed) {
-		in.events->Traverse([&os](const Event& ev) {
-			os << ev << "\n";
-		});
-	}
-	return os;
-}
+#include "ProgramState.hpp"
+#include "ComputerClassBuilder.hpp"
 
 int main(int argc, char const *argv[])
 {
@@ -103,22 +22,20 @@ int main(int argc, char const *argv[])
 		std::exit(EXIT_FAILURE);
 	}
 
-	Input input_state(new Events);
+	ProgramState state(std::make_unique<ComputerClassBuilder>());
 
-	std::string line;
-	while (std::getline(fin, line) && !line.empty()) {
-		std::stringstream line_stream(line);
-
+	std::string cmd_line;
+	while (std::getline(fin, cmd_line) && !cmd_line.empty()) {
 		try {
-			line_stream >> input_state;
+			state.Change(cmd_line);
 		} catch (std::exception& e) {
-			std::cerr << "fail on line: " << line << "\n"
+			std::cerr << "fail on line: " << cmd_line << "\n"
 				<< ", error: " << e.what() << std::endl;
 			std::exit(EXIT_FAILURE);
 		}
 	}
 
-	std::cout << input_state;
+	std::cout << state;
 
 	return 0;
-}
+}	

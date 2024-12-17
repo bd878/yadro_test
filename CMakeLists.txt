@@ -4,6 +4,10 @@ project(yadro_test)
 
 add_executable(yadro_test
 	main.cpp
+	ProgramState.hpp
+	ComputerClass.hpp
+	ComputerClassBuilder.hpp
+	EventFactory.hpp
 	Events.hpp
 	TimeFormat.hpp
 	Event.hpp

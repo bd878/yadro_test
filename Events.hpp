@@ -9,10 +9,10 @@
 class Events
 {
 public:
-	using Function = std::function<void(const Event&)>;
+	using Function = std::function<void(const Event*)>;
 
 	struct Node {
-		Event value;
+		Event* value;
 		Node* next = nullptr;
 	};
 
@@ -23,7 +23,7 @@ public:
 		}
 	}
 
-	void InsertAfter(Node* node, const Event& value)
+	void InsertAfter(Node* node, Event* value)
 	{
 		if (node == nullptr) {
 			Node* newHead = new Node;
@@ -46,6 +46,7 @@ public:
 		if (head != nullptr) {
 			Node* currentHead = head;
 			head = head->next;
+			delete currentHead->value;
 			delete currentHead;
 		}
 	}
