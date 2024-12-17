@@ -1,24 +1,46 @@
 #pragma once
 
 #include <iostream>
+#include <cstdlib>
 #include <string>
 #include <exception>
 #include <sstream>
 
+const int MINUTES_IN_HOURS = 60;
+
 struct TimeFormat
 {
-	int hours;
-	int minutes;
+	int m_hours;
+	int m_minutes;
 
 	TimeFormat() :
-		hours(0),
-		minutes(0)
+		m_hours(0),
+		m_minutes(0)
 	{}
+
+	TimeFormat(int minutes)
+	{
+		auto div = std::div(minutes, MINUTES_IN_HOURS);
+		m_minutes = div.rem;
+		m_hours = div.quot;
+	}
 
 	TimeFormat(TimeFormat& tf)
 	{
-		hours = tf.hours;
-		minutes = tf.minutes;
+		m_hours = tf.m_hours;
+		m_minutes = tf.m_minutes;
+	}
+
+	int ToMinutes() const
+	{
+		int minutes = m_hours*MINUTES_IN_HOURS;
+		return minutes + m_minutes;
+	}
+
+	TimeFormat operator -(const TimeFormat& rhs)
+	{
+		int minutes = this->ToMinutes() - rhs.ToMinutes();
+		return TimeFormat(minutes);
 	}
 };
 
@@ -50,8 +72,8 @@ std::istream& operator>>(std::istream& is, TimeFormat& tf)
 	is >> str;
 
 	const auto [lhs, rhs] = SplitTwo(str, ':');
-	tf.hours = ConvertStrToInt(lhs);
-	tf.minutes = ConvertStrToInt(rhs);
+	tf.m_hours = ConvertStrToInt(lhs);
+	tf.m_minutes = ConvertStrToInt(rhs);
 
 	return is;
 }
@@ -59,10 +81,10 @@ std::istream& operator>>(std::istream& is, TimeFormat& tf)
 std::ostream& operator<<(std::ostream& os, const TimeFormat& tf)
 {
 	/* how much bytes would have been written */
-	const int n_bytes = snprintf(nullptr, 0, "%02d:%02d", tf.hours, tf.minutes);
+	const int n_bytes = snprintf(nullptr, 0, "%02d:%02d", tf.m_hours, tf.m_minutes);
 	std::string out;
 	out.resize(n_bytes+1);
-	snprintf(&out[0], out.size(), "%02d:%02d", tf.hours, tf.minutes);
+	snprintf(&out[0], out.size(), "%02d:%02d", tf.m_hours, tf.m_minutes);
 	os << out;
 	return os;
 }
