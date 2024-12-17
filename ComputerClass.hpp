@@ -86,20 +86,21 @@ public:
 		m_events(events)
 	{}
 
-	void HandleEvent(Event&);
+	void HandleEvent(Event*);
 
 	friend std::ostream& operator<<(std::ostream&, ComputerClass const&);
 };
 
-void ComputerClass::HandleEvent(Event& ev)
+void ComputerClass::HandleEvent(Event* ev)
 {
 	m_events->InsertAfter(m_events->GetHead(), ev);
 }
 
 std::ostream& operator<<(std::ostream& os, ComputerClass const& cs)
 {
-	cs.m_events->Traverse([&os](const Event& ev) {
-		os << ev << "\n";
+	cs.m_events->Traverse([&os](const Event* ev) {
+		ev->Print(os);
+		os << "\n";
 	});
 	return os;
 }

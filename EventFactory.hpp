@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include "EventParams.hpp"
 #include "Event.hpp"
 
@@ -20,14 +22,18 @@ public:
 		switch (id) {
 		case EventID::ClientTakeFreeTable:
 			return new TableEvent();
+			break;
 		case EventID::ClientArrive:
 		case EventID::ClientWaitingInQueue:
 		case EventID::ClientLeave:
 		case EventID::ClientTimeout:
-		case EventID::NextClientInQueue:
+		case EventID::NextClientInQueue: {
 			return new ClientEvent();
+			break;
+		}
 		case EventID::Error:
 			return new ErrorEvent();
+			break;
 		default:
 			return new Event();
 		}

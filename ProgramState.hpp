@@ -71,7 +71,7 @@ void ProgramState::Change(std::string cmd_line)
 			is >> params;
 			auto event = TheEventFactory::Instance()->Create(params.GetID());
 			event->Load(params);
-			m_computer_class->HandleEvent(*event);
+			m_computer_class->HandleEvent(event);
 			break;
 		}
 		default:
