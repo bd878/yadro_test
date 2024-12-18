@@ -36,8 +36,8 @@ public:
 			newNode->value = value;
 			newNode->next = node->next;
 			node->next = newNode;
-			if (node->next == nullptr) {
-				last = node;
+			if (newNode->next == nullptr) {
+				last = newNode;
 			}
 		}
 	}

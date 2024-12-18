@@ -41,6 +41,20 @@ class EventParams
 public:
 	EventParams() = default;
 
+	EventParams(
+		EventID id,
+		TimeFormat time,
+		std::string error,
+		std::string name,
+		int table
+	) : m_id(id),
+		m_time(time),
+		m_error(error),
+		m_name(name),
+		m_table(table)
+	{
+	}
+
 	const TimeFormat& GetTime() const { return m_time; }
 	EventID GetID() const { return m_id; }
 	std::string GetName() const { return m_name; }

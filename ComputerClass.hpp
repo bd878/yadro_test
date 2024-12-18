@@ -1,6 +1,5 @@
 #pragma once
 
-#include <memory>
 #include <ostream>
 #include <vector>
 #include <algorithm>
@@ -8,57 +7,70 @@
 
 #include "Event.hpp"
 #include "Events.hpp"
+#include "EventFactory.hpp"
 
 class ComputerTables
 {
 	struct TableStat
 	{
 		int id;
-		int revenue;
-		int time_total;
+		int minutes_total;
+		std::string client_name;
 		bool is_table_free;
-		TimeFormat busy_at;
+		TimeFormat busy_start_time;
 
 		TableStat(int _id)
-		: id(_id), revenue(0), time_total(0)
+		: id(_id), minutes_total(0)
 		{}
 	};
 
-	std::vector<std::string> m_table_to_client;
-	std::vector<std::unique_ptr<TableStat>> m_tables;
+	std::vector<TableStat*> m_tables;
 
 public:
 	ComputerTables(int count)
 	{
-		m_table_to_client = std::vector<std::string>(count, "");
 		m_tables.resize(count);
 		for (int i = 0; i < m_tables.size(); i++) {
-			m_tables[i] = std::make_unique<TableStat>(i);
+			m_tables[i] = new TableStat(i);
 		}
 	}
 
 	int GetAnyFreeTable() const
 	{
-		auto it = std::find(m_table_to_client.begin(), m_table_to_client.end(), "");
-		if (it == m_table_to_client.end()) {
+		auto it = std::find_if(m_tables.begin(), m_tables.end(), [](const auto& it) {
+			return it->is_table_free;
+		});
+		if (it == m_tables.end()) {
 			return -1;
 		}
-		return std::distance(m_table_to_client.begin(), it);
+		return std::distance(m_tables.begin(), it);
 	}
 
 	bool IsTableBusy(int table_id) const
 	{
-		return m_table_to_client.at(table_id) != "";
+		return !m_tables.at(table_id)->is_table_free;
 	}
 
-	void TakeTable(int table_id, std::string client_name)
+	void TakeTable(int table_id, std::string client_name, TimeFormat time)
 	{
-		m_table_to_client[table_id] = client_name;
+		auto table = m_tables.at(table_id);
+		if (table->is_table_free) {
+			table->is_table_free = false;
+			table->client_name = client_name;
+			table->busy_start_time = time;
+		}
 	}
 
-	void FreeTable(int table_id)
+	void FreeTable(int table_id, TimeFormat time)
 	{
-		m_table_to_client[table_id] = "";
+		auto table = m_tables.at(table_id);
+		if (!table->is_table_free) {
+			table->is_table_free = true;
+			table->client_name = "";
+			auto busy_timme = time - table->busy_start_time;
+			table->minutes_total += busy_timme.ToMinutes();
+			table->busy_start_time.Reset();
+		}
 	}
 };
 
@@ -68,6 +80,17 @@ class Clients
 
 public:
 	Clients() = default;
+
+	bool HasClient(std::string name) const
+	{
+		auto it = m_client_to_table.find(name);
+		return m_client_to_table.end() != it;
+	}
+
+	void ClientTakeTable(std::string name, int table)
+	{
+		m_client_to_table.insert({name, table});
+	}
 };
 
 class ComputerClass
@@ -76,24 +99,73 @@ class ComputerClass
 	std::shared_ptr<Clients> m_clients;
 	std::shared_ptr<Events> m_events;
 
+	TimeFormat m_time_open;
+	TimeFormat m_time_close;
+
 public:
 	ComputerClass(
 		std::shared_ptr<ComputerTables> tables,
 		std::shared_ptr<Clients> clients,
-		std::shared_ptr<Events> events
+		std::shared_ptr<Events> events,
+		TimeFormat time_open,
+		TimeFormat time_close
 	) : m_tables(tables),
 		m_clients(clients),
-		m_events(events)
+		m_events(events),
+		m_time_open(time_open),
+		m_time_close(time_close)
 	{}
 
 	void HandleEvent(Event*);
 
 	friend std::ostream& operator<<(std::ostream&, ComputerClass const&);
+
+private:
+	void handleClientArrive(ClientEvent*);
+	void handleClientTakeTable(TableEvent*);
 };
 
 void ComputerClass::HandleEvent(Event* ev)
 {
-	m_events->InsertAfter(m_events->GetHead(), ev);
+	m_events->InsertAfter(m_events->GetLast(), ev);
+
+	switch (ev->GetID()) {
+	case EventID::ClientArrive: {
+		handleClientArrive(dynamic_cast<ClientEvent*>(ev));
+		break;
+	}
+	case EventID::ClientTakeFreeTable: {
+		handleClientTakeTable(dynamic_cast<TableEvent*>(ev));
+		break;
+	}
+	case EventID::Error:
+		break;
+	}
+}
+
+void ComputerClass::handleClientArrive(ClientEvent* ev)
+{
+	if (m_clients->HasClient(ev->GetClientName())) {
+		auto event = TheEventFactory::Instance()->Create(EventID::Error);
+		event->Load(EventParams(
+			EventID::Error, ev->GetTime(), "YouShallNotPass", 0, 0
+		));
+		this->HandleEvent(event);
+		return;
+	}
+
+	if (ev->GetTime() < m_time_open || ev->GetTime() > m_time_close) {
+		auto event = TheEventFactory::Instance()->Create(EventID::Error);
+		event->Load(EventParams(
+			EventID::Error, ev->GetTime(), "NotOpenYet", "", 0
+		));
+		this->HandleEvent(event);
+		return;
+	}
+}
+
+void ComputerClass::handleClientTakeTable(TableEvent*)
+{
 }
 
 std::ostream& operator<<(std::ostream& os, ComputerClass const& cs)

@@ -29,7 +29,7 @@ public:
 	}
 
 	EventID GetID() const { return m_id; }
-	const TimeFormat& GetTime() const { return m_time; }
+	TimeFormat GetTime() const { return m_time; }
 };
 
 class ClientEvent : public Event
@@ -50,6 +50,8 @@ public:
 		Event::Print(os);
 		os << " " << m_name;
 	}
+
+	std::string GetClientName() const { return m_name; }
 };
 
 class ErrorEvent : public Event
@@ -70,24 +72,28 @@ public:
 		Event::Print(os);
 		os << " " << m_error;
 	}
+
+	std::string GetError() const { return m_error; }
 };
 
-class TableEvent : public Event
+class TableEvent : public ClientEvent
 {
 	int m_table;
 
 public:
-	TableEvent() : Event() {}
+	TableEvent() : ClientEvent() {}
 
 	virtual void Load(EventParams const& params)
 	{
-		Event::Load(params);
+		ClientEvent::Load(params);
 		m_table = params.GetTable();
 	}
 
 	virtual void Print(std::ostream& os) const
 	{
-		Event::Print(os);
+		ClientEvent::Print(os);
 		os << " " << m_table;
 	}
+
+	int GetTableID() const { return m_table; }
 };

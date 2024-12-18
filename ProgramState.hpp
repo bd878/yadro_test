@@ -52,13 +52,15 @@ void ProgramState::Change(std::string cmd_line)
 			m_builder->AddTables(std::make_shared<ComputerTables>(m_tables_count));
 			m_builder->AddClients(std::make_shared<Clients>());
 			m_builder->AddEvents(std::make_shared<Events>());
-			m_computer_class = std::move(m_builder->BuildComputerClass());
 			m_state = ProgramState::State::Horaires;
 			break;
 		}
 		case ProgramState::State::Horaires: {
 			is >> m_time_open >> m_time_close;
+			m_builder->AddTimeOpen(m_time_open);
+			m_builder->AddTimeClose(m_time_close);
 			m_state = ProgramState::State::Price;
+			m_computer_class = std::move(m_builder->BuildComputerClass());
 			break;
 		}
 		case ProgramState::State::Price: {

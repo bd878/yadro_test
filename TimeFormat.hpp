@@ -25,10 +25,16 @@ struct TimeFormat
 		m_hours = div.quot;
 	}
 
-	TimeFormat(TimeFormat& tf)
+	TimeFormat(const TimeFormat& tf)
 	{
 		m_hours = tf.m_hours;
 		m_minutes = tf.m_minutes;
+	}
+
+	void Reset()
+	{
+		m_hours = 0;
+		m_minutes = 0;
 	}
 
 	int ToMinutes() const
@@ -41,6 +47,20 @@ struct TimeFormat
 	{
 		int minutes = this->ToMinutes() - rhs.ToMinutes();
 		return TimeFormat(minutes);
+	}
+
+	bool operator <(const TimeFormat& rhs)
+	{
+		int min1 = this->ToMinutes();
+		int min2 = rhs.ToMinutes();
+		return min1 < min2;
+	}
+
+	bool operator >(const TimeFormat& rhs)
+	{
+		int min1 = this->ToMinutes();
+		int min2 = rhs.ToMinutes();
+		return min1 > min2;
 	}
 };
 
