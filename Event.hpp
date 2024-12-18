@@ -25,7 +25,7 @@ public:
 
 	virtual void Print(std::ostream& os) const
 	{
-		os << m_id << " " << m_time;
+		os << m_time << " " << m_id;
 	}
 
 	EventID GetID() const { return m_id; }

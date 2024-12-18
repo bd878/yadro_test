@@ -70,8 +70,17 @@ public:
 		return m_queue.size() >= m_tables_count;
 	}
 
+	bool IsQueueEmpty()
+	{
+		return m_queue.empty();
+	}
+
 	std::string PopClientFromQueue()
 	{
+		if (m_queue.empty()) {
+			return "";
+		}
+
 		auto result = m_queue.front();
 		m_queue.pop();
 		return result;

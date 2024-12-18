@@ -156,6 +156,11 @@ void ComputerClass::handleClientLeave(std::shared_ptr<ClientEvent> ev)
 	int table = m_clients->GetClientTable(ev->GetClientName());
 	if (table != -1) {
 		m_clients->ClientLeave(ev->GetClientName());
+		m_tables->FreeTable(table, ev->GetTime());
+		if (m_clients->IsQueueEmpty()) {
+			return;
+		}
+
 		std::string client = m_clients->PopClientFromQueue();
 		m_clients->ClientTakeTable(client, table);
 
