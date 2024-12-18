@@ -19,7 +19,8 @@ public:
 		Init = 0,
 		Horaires = 1,
 		Price = 2,
-		EventFeed = 3
+		EventFeed = 3,
+		Stop = 4
 	};
 
 private:
@@ -38,6 +39,7 @@ public:
 		: m_builder(std::move(b)) {}
 
 	void Change(std::string);
+	void Finish();
 
 	friend std::ostream& operator<<(std::ostream&, const ProgramState&);
 };
@@ -49,7 +51,6 @@ void ProgramState::Change(std::string cmd_line)
 	switch (m_state) {
 		case ProgramState::State::Init: {
 			is >> m_tables_count;
-			m_builder->AddTables(std::make_shared<ComputerTables>(m_tables_count));
 			m_builder->AddClients(std::make_shared<Clients>(m_tables_count));
 			m_builder->AddEvents(std::make_shared<Events>());
 			m_state = ProgramState::State::Horaires;
@@ -60,11 +61,12 @@ void ProgramState::Change(std::string cmd_line)
 			m_builder->AddTimeOpen(m_time_open);
 			m_builder->AddTimeClose(m_time_close);
 			m_state = ProgramState::State::Price;
-			m_computer_class = std::move(m_builder->BuildComputerClass());
 			break;
 		}
 		case ProgramState::State::Price: {
 			is >> m_price_for_hour;
+			m_builder->AddTables(std::make_shared<ComputerTables>(m_tables_count, m_price_for_hour));
+			m_computer_class = std::move(m_builder->BuildComputerClass());
 			m_state = ProgramState::State::EventFeed;
 			break;
 		}
@@ -81,11 +83,16 @@ void ProgramState::Change(std::string cmd_line)
 	}
 }
 
+void ProgramState::Finish()
+{
+	m_state = ProgramState::State::Stop;
+	if (m_computer_class.get() != nullptr) {
+		m_computer_class->Close();
+	}
+}
+
 std::ostream& operator<<(std::ostream& os, const ProgramState& ps)
 {
-	os << "TablesCount: " << ps.m_tables_count << "\n"
-		<< "Horaires: " << ps.m_time_open << " - " << ps.m_time_close << "\n"
-		<< "Price for hour: " << ps.m_price_for_hour << "\n"
-		<< "Events: " << "\n" << *ps.m_computer_class.get();
+	os << *ps.m_computer_class.get() << "\n";
 	return os;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <ostream>
 #include <algorithm>
 #include <vector>
 
@@ -16,19 +17,21 @@ class ComputerTables
 		TimeFormat busy_start_time;
 
 		TableStat(int _id)
-		: id(_id), minutes_total(0), is_table_free(true)
+			: id(_id), minutes_total(0), is_table_free(true)
 		{}
 	};
 
 	int m_tables_count;
-	std::vector<TableStat*> m_tables;
+	int m_hour_price;
+	std::vector<std::shared_ptr<TableStat>> m_tables;
 
 public:
-	ComputerTables(int count) : m_tables_count(count)
+	ComputerTables(int count, int price)
+		: m_tables_count(count), m_hour_price(price)
 	{
 		m_tables.resize(count);
 		for (int i = 0; i < m_tables.size(); i++) {
-			m_tables[i] = new TableStat(i);
+			m_tables[i] = std::make_shared<TableStat>(i+1);
 		}
 	}
 
@@ -62,9 +65,20 @@ public:
 		auto table = m_tables.at(table_id-1);
 		if (!table->is_table_free) {
 			table->is_table_free = true;
-			auto busy_timme = time - table->busy_start_time;
-			table->minutes_total += busy_timme.ToMinutes();
+			auto busy_time = time - table->busy_start_time;
+			table->minutes_total += busy_time.ToMinutes();
 			table->busy_start_time.Reset();
 		}
 	}
+
+	friend std::ostream& operator<<(std::ostream&, ComputerTables const&);
 };
+
+std::ostream& operator<<(std::ostream& os, ComputerTables const& tables)
+{
+	std::for_each(tables.m_tables.begin(), tables.m_tables.end(), [&os](const auto& table) {
+		TimeFormat total_time(table->minutes_total);
+		os << table->id << " " << total_time << "\n";
+	});
+	return os;
+}

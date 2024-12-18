@@ -3,6 +3,7 @@
 #include <ostream>
 #include <vector>
 #include <algorithm>
+#include <utility>
 #include <unordered_map>
 
 #include "ComputerTables.hpp"
@@ -36,6 +37,8 @@ public:
 
 	void HandleEvent(std::shared_ptr<Event>);
 
+	void Close();
+
 	friend std::ostream& operator<<(std::ostream&, ComputerClass const&);
 
 private:
@@ -43,7 +46,19 @@ private:
 	void handleClientTakeTable(std::shared_ptr<TableEvent>);
 	void handleClientWaiting(std::shared_ptr<ClientEvent>);
 	void handleClientLeave(std::shared_ptr<ClientEvent>);
+	void handleClientTimeout(std::shared_ptr<ClientEvent>);
 };
+
+void ComputerClass::Close()
+{
+	m_clients->Traverse([this](std::pair<const std::string, int> p) {
+		auto event = TheEventFactory::Instance()->Create(EventID::ClientTimeout);
+		event->Load(EventParams(
+			EventID::ClientTimeout, m_time_close, "", p.first, 0
+		));
+		HandleEvent(event);
+	});
+}
 
 void ComputerClass::HandleEvent(std::shared_ptr<Event> ev)
 {
@@ -63,6 +78,8 @@ void ComputerClass::HandleEvent(std::shared_ptr<Event> ev)
 		handleClientLeave(std::dynamic_pointer_cast<ClientEvent>(ev));
 		break;
 	case EventID::ClientTimeout:
+		handleClientTimeout(std::dynamic_pointer_cast<ClientEvent>(ev));
+		break;
 	case EventID::Error:
 		break;
 	}
@@ -173,11 +190,27 @@ void ComputerClass::handleClientLeave(std::shared_ptr<ClientEvent> ev)
 	}
 }
 
+void ComputerClass::handleClientTimeout(std::shared_ptr<ClientEvent> ev)
+{
+	if (!m_clients->HasClient(ev->GetClientName())) {
+		return;
+	}
+
+	int table = m_clients->GetClientTable(ev->GetClientName());
+	if (table != -1) {
+		m_clients->ClientLeave(ev->GetClientName());
+		m_tables->FreeTable(table, ev->GetTime());
+	}
+}
+
 std::ostream& operator<<(std::ostream& os, ComputerClass const& cs)
 {
+	os << cs.m_time_open << "\n";
 	cs.m_events->Traverse([&os](const std::shared_ptr<Event> ev) {
 		ev->Print(os);
 		os << "\n";
 	});
+	os << cs.m_time_close << "\n"
+		<< *cs.m_tables.get() << "\n";
 	return os;
 }

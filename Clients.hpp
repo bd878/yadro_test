@@ -3,6 +3,8 @@
 #include <iostream>
 #include <queue>
 #include <map>
+#include <utility>
+#include <functional>
 #include <unordered_map>
 
 class Clients
@@ -14,6 +16,8 @@ class Clients
 	int m_tables_count;
 
 public:
+	using Function = std::function<void(std::pair<const std::string, int>)>;
+
 	Clients() = default;
 
 	Clients(int tables_count) : m_tables_count(tables_count) {}
@@ -32,6 +36,14 @@ public:
 	{
 		ClientFreeTable(name);
 		m_clients.erase(name);
+	}
+
+	void Traverse(Function visit)
+	{
+		std::vector<std::pair<std::string, int>> clients;
+		clients.reserve(m_clients.size());
+		std::copy(m_clients.begin(), m_clients.end(), std::back_inserter(clients));
+		std::for_each(clients.begin(), clients.end(), visit);
 	}
 
 	int GetClientTable(std::string name)

@@ -35,6 +35,8 @@ int main(int argc, char const *argv[])
 		}
 	}
 
+	state.Finish();
+
 	std::cout << state;
 
 	return 0;
