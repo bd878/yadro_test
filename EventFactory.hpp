@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <memory>
 
 #include "EventParams.hpp"
 #include "Event.hpp"
@@ -17,25 +18,25 @@ public:
 		return p_instance;
 	}
 
-	Event* Create(EventID id) const
+	std::shared_ptr<Event> Create(EventID id) const
 	{
 		switch (id) {
 		case EventID::ClientTakeFreeTable:
-			return new TableEvent();
+			return std::make_shared<TableEvent>();
 			break;
 		case EventID::ClientArrive:
 		case EventID::ClientWaitingInQueue:
 		case EventID::ClientLeave:
 		case EventID::ClientTimeout:
 		case EventID::NextClientInQueue: {
-			return new ClientEvent();
+			return std::make_shared<ClientEvent>();
 			break;
 		}
 		case EventID::Error:
-			return new ErrorEvent();
+			return std::make_shared<ErrorEvent>();
 			break;
 		default:
-			return new Event();
+			return std::make_shared<Event>();
 		}
 	}
 

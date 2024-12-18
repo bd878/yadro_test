@@ -5,93 +5,11 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include "ComputerTables.hpp"
+#include "Clients.hpp"
 #include "Event.hpp"
 #include "Events.hpp"
 #include "EventFactory.hpp"
-
-class ComputerTables
-{
-	struct TableStat
-	{
-		int id;
-		int minutes_total;
-		std::string client_name;
-		bool is_table_free;
-		TimeFormat busy_start_time;
-
-		TableStat(int _id)
-		: id(_id), minutes_total(0)
-		{}
-	};
-
-	std::vector<TableStat*> m_tables;
-
-public:
-	ComputerTables(int count)
-	{
-		m_tables.resize(count);
-		for (int i = 0; i < m_tables.size(); i++) {
-			m_tables[i] = new TableStat(i);
-		}
-	}
-
-	int GetAnyFreeTable() const
-	{
-		auto it = std::find_if(m_tables.begin(), m_tables.end(), [](const auto& it) {
-			return it->is_table_free;
-		});
-		if (it == m_tables.end()) {
-			return -1;
-		}
-		return std::distance(m_tables.begin(), it);
-	}
-
-	bool IsTableBusy(int table_id) const
-	{
-		return !m_tables.at(table_id)->is_table_free;
-	}
-
-	void TakeTable(int table_id, std::string client_name, TimeFormat time)
-	{
-		auto table = m_tables.at(table_id);
-		if (table->is_table_free) {
-			table->is_table_free = false;
-			table->client_name = client_name;
-			table->busy_start_time = time;
-		}
-	}
-
-	void FreeTable(int table_id, TimeFormat time)
-	{
-		auto table = m_tables.at(table_id);
-		if (!table->is_table_free) {
-			table->is_table_free = true;
-			table->client_name = "";
-			auto busy_timme = time - table->busy_start_time;
-			table->minutes_total += busy_timme.ToMinutes();
-			table->busy_start_time.Reset();
-		}
-	}
-};
-
-class Clients
-{
-	std::unordered_map<std::string, int> m_client_to_table;
-
-public:
-	Clients() = default;
-
-	bool HasClient(std::string name) const
-	{
-		auto it = m_client_to_table.find(name);
-		return m_client_to_table.end() != it;
-	}
-
-	void ClientTakeTable(std::string name, int table)
-	{
-		m_client_to_table.insert({name, table});
-	}
-};
 
 class ComputerClass
 {
@@ -116,39 +34,46 @@ public:
 		m_time_close(time_close)
 	{}
 
-	void HandleEvent(Event*);
+	void HandleEvent(std::shared_ptr<Event>);
 
 	friend std::ostream& operator<<(std::ostream&, ComputerClass const&);
 
 private:
-	void handleClientArrive(ClientEvent*);
-	void handleClientTakeTable(TableEvent*);
+	void handleClientArrive(std::shared_ptr<ClientEvent>);
+	void handleClientTakeTable(std::shared_ptr<TableEvent>);
+	void handleClientWaiting(std::shared_ptr<ClientEvent>);
+	void handleClientLeave(std::shared_ptr<ClientEvent>);
 };
 
-void ComputerClass::HandleEvent(Event* ev)
+void ComputerClass::HandleEvent(std::shared_ptr<Event> ev)
 {
 	m_events->InsertAfter(m_events->GetLast(), ev);
 
 	switch (ev->GetID()) {
-	case EventID::ClientArrive: {
-		handleClientArrive(dynamic_cast<ClientEvent*>(ev));
+	case EventID::ClientArrive:
+		handleClientArrive(std::dynamic_pointer_cast<ClientEvent>(ev));
 		break;
-	}
-	case EventID::ClientTakeFreeTable: {
-		handleClientTakeTable(dynamic_cast<TableEvent*>(ev));
+	case EventID::ClientTakeFreeTable:
+		handleClientTakeTable(std::dynamic_pointer_cast<TableEvent>(ev));
 		break;
-	}
+	case EventID::ClientWaitingInQueue:
+		handleClientWaiting(std::dynamic_pointer_cast<ClientEvent>(ev));
+		break;
+	case EventID::ClientLeave:
+		handleClientLeave(std::dynamic_pointer_cast<ClientEvent>(ev));
+		break;
+	case EventID::ClientTimeout:
 	case EventID::Error:
 		break;
 	}
 }
 
-void ComputerClass::handleClientArrive(ClientEvent* ev)
+void ComputerClass::handleClientArrive(std::shared_ptr<ClientEvent> ev)
 {
 	if (m_clients->HasClient(ev->GetClientName())) {
 		auto event = TheEventFactory::Instance()->Create(EventID::Error);
 		event->Load(EventParams(
-			EventID::Error, ev->GetTime(), "YouShallNotPass", 0, 0
+			EventID::Error, ev->GetTime(), "YouShallNotPass", "", 0
 		));
 		this->HandleEvent(event);
 		return;
@@ -162,15 +87,90 @@ void ComputerClass::handleClientArrive(ClientEvent* ev)
 		this->HandleEvent(event);
 		return;
 	}
+
+	m_clients->AddClient(ev->GetClientName());
 }
 
-void ComputerClass::handleClientTakeTable(TableEvent*)
+void ComputerClass::handleClientTakeTable(std::shared_ptr<TableEvent> ev)
 {
+	if (!m_clients->HasClient(ev->GetClientName())) {
+		auto event = TheEventFactory::Instance()->Create(EventID::Error);
+		event->Load(EventParams(
+			EventID::Error, ev->GetTime(), "ClientUnknown", "", 0
+		));
+		this->HandleEvent(event);
+		return;
+	}
+
+	if (m_tables->IsTableBusy(ev->GetTableID())) {
+		auto event = TheEventFactory::Instance()->Create(EventID::Error);
+		event->Load(EventParams(
+			EventID::Error, ev->GetTime(), "PlaceIsBusy", "", 0
+		));
+		this->HandleEvent(event);
+		return;
+	}
+
+	int current_table = m_clients->GetClientTable(ev->GetClientName());
+	if (current_table != -1) {
+		m_tables->FreeTable(current_table, ev->GetTime());
+	}
+	m_clients->ClientTakeTable(ev->GetClientName(), ev->GetTableID());
+	m_tables->TakeTable(ev->GetTableID(), ev->GetTime());
+}
+
+void ComputerClass::handleClientWaiting(std::shared_ptr<ClientEvent> ev)
+{
+	if (m_tables->GetAnyFreeTable() != -1) {
+		auto event = TheEventFactory::Instance()->Create(EventID::Error);
+		event->Load(EventParams(
+			EventID::Error, ev->GetTime(), "ICanWaitNoLonger", "", 0
+		));
+		this->HandleEvent(event);
+		return;
+	}
+
+	if (m_clients->IsQueueFull()) {
+		auto event = TheEventFactory::Instance()->Create(EventID::ClientTimeout);
+		event->Load(EventParams(
+			EventID::ClientTimeout, ev->GetTime(), "", ev->GetClientName(), 0
+		));
+		this->HandleEvent(event);
+		return;
+	}
+
+	m_clients->AddClientToQueue(ev->GetClientName());
+}
+
+void ComputerClass::handleClientLeave(std::shared_ptr<ClientEvent> ev)
+{
+	if (!m_clients->HasClient(ev->GetClientName())) {
+		auto event = TheEventFactory::Instance()->Create(EventID::Error);
+		event->Load(EventParams(
+			EventID::Error, ev->GetTime(), "ClientUnknown", ev->GetClientName(), 0
+		));
+		this->HandleEvent(event);
+		return;
+	}
+
+	int table = m_clients->GetClientTable(ev->GetClientName());
+	if (table != -1) {
+		m_clients->ClientLeave(ev->GetClientName());
+		std::string client = m_clients->PopClientFromQueue();
+		m_clients->ClientTakeTable(client, table);
+
+		auto event = TheEventFactory::Instance()->Create(EventID::NextClientInQueue);
+		event->Load(EventParams(
+			EventID::NextClientInQueue, ev->GetTime(), "", ev->GetClientName(), table
+		));
+		this->HandleEvent(event);
+		return;
+	}
 }
 
 std::ostream& operator<<(std::ostream& os, ComputerClass const& cs)
 {
-	cs.m_events->Traverse([&os](const Event* ev) {
+	cs.m_events->Traverse([&os](const std::shared_ptr<Event> ev) {
 		ev->Print(os);
 		os << "\n";
 	});

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <functional>
 
 #include "EventParams.hpp"
@@ -9,10 +10,10 @@
 class Events
 {
 public:
-	using Function = std::function<void(const Event*)>;
+	using Function = std::function<void(const std::shared_ptr<Event>)>;
 
 	struct Node {
-		Event* value;
+		std::shared_ptr<Event> value;
 		Node* next = nullptr;
 	};
 
@@ -23,7 +24,7 @@ public:
 		}
 	}
 
-	void InsertAfter(Node* node, Event* value)
+	void InsertAfter(Node* node, std::shared_ptr<Event> value)
 	{
 		if (node == nullptr) {
 			Node* newHead = new Node;
@@ -46,7 +47,6 @@ public:
 		if (head != nullptr) {
 			Node* currentHead = head;
 			head = head->next;
-			delete currentHead->value;
 			delete currentHead;
 		}
 	}

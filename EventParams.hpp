@@ -77,7 +77,7 @@ std::istream& operator>>(std::istream& is, EventParams& params)
 		break;
 	}
 	case EventID::ClientTakeFreeTable: {
-		is >> params.m_table;
+		is >> params.m_name >> params.m_table;
 		break;
 	}
 	case EventID::Error: {

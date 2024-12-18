@@ -5,6 +5,8 @@ project(yadro_test)
 add_executable(yadro_test
 	main.cpp
 	ProgramState.hpp
+	ComputerTables.hpp
+	Clients.hpp
 	ComputerClass.hpp
 	ComputerClassBuilder.hpp
 	EventFactory.hpp

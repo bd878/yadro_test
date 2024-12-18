@@ -50,7 +50,7 @@ void ProgramState::Change(std::string cmd_line)
 		case ProgramState::State::Init: {
 			is >> m_tables_count;
 			m_builder->AddTables(std::make_shared<ComputerTables>(m_tables_count));
-			m_builder->AddClients(std::make_shared<Clients>());
+			m_builder->AddClients(std::make_shared<Clients>(m_tables_count));
 			m_builder->AddEvents(std::make_shared<Events>());
 			m_state = ProgramState::State::Horaires;
 			break;
