@@ -29,8 +29,7 @@ int main(int argc, char const *argv[])
 		try {
 			state.Change(cmd_line);
 		} catch (std::exception& e) {
-			std::cerr << "fail on line: " << cmd_line << "\n"
-				<< ", error: " << e.what() << std::endl;
+			std::cerr << cmd_line << std::endl;
 			std::exit(EXIT_FAILURE);
 		}
 	}

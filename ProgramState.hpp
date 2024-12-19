@@ -4,6 +4,8 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <exception>
+#include <cstdio>
 
 #include "TimeFormat.hpp"
 #include "EventFactory.hpp"
@@ -50,7 +52,10 @@ void ProgramState::Change(std::string cmd_line)
 
 	switch (m_state) {
 		case ProgramState::State::Init: {
-			is >> m_tables_count;
+			int ret = std::sscanf(cmd_line.c_str(), "%d", &m_tables_count);
+			if (ret == 0 || ret == EOF) {
+				throw std::invalid_argument(cmd_line);
+			}
 			m_builder->AddClients(std::make_shared<Clients>(m_tables_count));
 			m_builder->AddEvents(std::make_shared<Events>());
 			m_state = ProgramState::State::Horaires;
@@ -64,7 +69,10 @@ void ProgramState::Change(std::string cmd_line)
 			break;
 		}
 		case ProgramState::State::Price: {
-			is >> m_price_for_hour;
+			int ret = std::sscanf(cmd_line.c_str(), "%d", &m_price_for_hour);
+			if (ret == 0 || ret == EOF) {
+				throw std::invalid_argument(cmd_line);
+			}
 			m_builder->AddTables(std::make_shared<ComputerTables>(m_tables_count, m_price_for_hour));
 			m_computer_class = std::move(m_builder->BuildComputerClass());
 			m_state = ProgramState::State::EventFeed;

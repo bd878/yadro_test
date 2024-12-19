@@ -141,7 +141,7 @@ void ComputerClass::handleClientWaiting(std::shared_ptr<ClientEvent> ev)
 	if (m_tables->GetAnyFreeTable() != -1) {
 		auto event = TheEventFactory::Instance()->Create(EventID::Error);
 		event->Load(EventParams(
-			EventID::Error, ev->GetTime(), "ICanWaitNoLonger", "", 0
+			EventID::Error, ev->GetTime(), "ICanWaitNoLonger!", "", 0
 		));
 		this->HandleEvent(event);
 		return;
