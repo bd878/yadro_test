@@ -14,10 +14,11 @@ class ComputerTables
 		int id;
 		int minutes_total;
 		bool is_table_free;
+		int revenue;
 		TimeFormat busy_start_time;
 
 		TableStat(int _id)
-			: id(_id), minutes_total(0), is_table_free(true)
+			: id(_id), minutes_total(0), is_table_free(true), revenue(0)
 		{}
 	};
 
@@ -67,6 +68,10 @@ public:
 			table->is_table_free = true;
 			auto busy_time = time - table->busy_start_time;
 			table->minutes_total += busy_time.ToMinutes();
+			table->revenue += (busy_time.GetHours() * m_hour_price);
+			if (busy_time.GetMinutes() > 0) {
+				table->revenue += m_hour_price;
+			}
 			table->busy_start_time.Reset();
 		}
 	}
@@ -78,7 +83,7 @@ std::ostream& operator<<(std::ostream& os, ComputerTables const& tables)
 {
 	std::for_each(tables.m_tables.begin(), tables.m_tables.end(), [&os](const auto& table) {
 		TimeFormat total_time(table->minutes_total);
-		os << table->id << " " << total_time << "\n";
+		os << table->id << " " << table->revenue << " " << total_time << "\n";
 	});
 	return os;
 }

@@ -180,10 +180,11 @@ void ComputerClass::handleClientLeave(std::shared_ptr<ClientEvent> ev)
 
 		std::string client = m_clients->PopClientFromQueue();
 		m_clients->ClientTakeTable(client, table);
+		m_tables->TakeTable(table, ev->GetTime());
 
 		auto event = TheEventFactory::Instance()->Create(EventID::NextClientInQueue);
 		event->Load(EventParams(
-			EventID::NextClientInQueue, ev->GetTime(), "", ev->GetClientName(), table
+			EventID::NextClientInQueue, ev->GetTime(), "", client, table
 		));
 		this->HandleEvent(event);
 		return;

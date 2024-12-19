@@ -8,11 +8,12 @@
 
 const int MINUTES_IN_HOURS = 60;
 
-struct TimeFormat
+class TimeFormat
 {
 	int m_hours;
 	int m_minutes;
 
+public:
 	TimeFormat() :
 		m_hours(0),
 		m_minutes(0)
@@ -36,6 +37,9 @@ struct TimeFormat
 		m_hours = 0;
 		m_minutes = 0;
 	}
+
+	int GetHours() const { return m_hours; } 
+	int GetMinutes() const { return m_minutes; }
 
 	int ToMinutes() const
 	{
@@ -62,6 +66,8 @@ struct TimeFormat
 		int min2 = rhs.ToMinutes();
 		return min1 > min2;
 	}
+
+	friend std::istream& operator>>(std::istream&, TimeFormat&);
 };
 
 std::pair<std::string, std::string> SplitTwo(std::string& str, char delim)
@@ -101,10 +107,10 @@ std::istream& operator>>(std::istream& is, TimeFormat& tf)
 std::ostream& operator<<(std::ostream& os, const TimeFormat& tf)
 {
 	/* how much bytes would have been written */
-	const int n_bytes = snprintf(nullptr, 0, "%02d:%02d", tf.m_hours, tf.m_minutes);
+	const int n_bytes = snprintf(nullptr, 0, "%02d:%02d", tf.GetHours(), tf.GetMinutes());
 	std::string out;
 	out.resize(n_bytes+1);
-	snprintf(&out[0], out.size(), "%02d:%02d", tf.m_hours, tf.m_minutes);
+	snprintf(&out[0], out.size(), "%02d:%02d", tf.GetHours(), tf.GetMinutes());
 	os << out;
 	return os;
 }
